@@ -21,8 +21,8 @@ build:
 
   # commands run after the environment is setup
   run:
-    - "curl -o ComfyUI/models/svd_xt.safetensors -O -L https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt/resolve/main/svd_xt.safetensors?download=true"
-    - "curl -o ComfyUI/models/sd_xl_base_1.0.safetensors -O -L https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true"
+    - "curl -o ComfyUI/models/ -L https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt/resolve/main/svd_xt.safetensors?download=true"
+    - "curl -o ComfyUI/models/ -L https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true"
     - "ls ComfyUI/models"
 
 image: "r8.im/leonmak/svd-cog"
