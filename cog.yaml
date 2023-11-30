@@ -21,8 +21,10 @@ build:
 
   # commands run after the environment is setup
   run:
-    - "echo env is ready!"
-  #   - "echo another command if needed"
+    - "wget -N -P ComfyUI/models https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt/resolve/main/svd_xt.safetensors?download=true"
+    - "wget -N -P ComfyUI/models https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true"
+    - "ls ComfyUI/models"
+
 image: "r8.im/leonmak/svd-cog"
 # predict.py defines how predictions are run on your model
 predict: "ComfyUI/predict.py:Predictor"
