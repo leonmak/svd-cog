@@ -23,6 +23,6 @@ build:
   run:
     - "echo env is ready!"
   #   - "echo another command if needed"
-
+image: "r8.im/leonmak/svd-cog"
 # predict.py defines how predictions are run on your model
 predict: "ComfyUI/predict.py:Predictor"
