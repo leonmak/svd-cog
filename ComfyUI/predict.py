@@ -122,8 +122,6 @@ def run(img_text):
     
     import_custom_nodes()
     
-    outputfile = None
-    
     with torch.inference_mode():
         emptylatentimage = EmptyLatentImage()
         emptylatentimage_5 = emptylatentimage.generate(
@@ -236,9 +234,9 @@ def run(img_text):
                 audio_file="",
                 images=get_value_at_index(vaedecode_34, 0),
             )
-            
-            outputfile = vhs_videocombine_36['file_path']
-    return outputfile
+    
+    res =  vhs_videocombine_36['ui']['gifs'][0]
+    return os.path.join(res['subfolder'], res['filename'])
 
 
 from cog import BasePredictor, Input, Path

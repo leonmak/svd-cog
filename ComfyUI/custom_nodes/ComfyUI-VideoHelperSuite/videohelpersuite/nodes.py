@@ -257,8 +257,7 @@ class VideoCombine:
                 "format": format,
             }
         ]
-        return {"ui": {"gifs": previews}, 
-                "file_path": file_path}
+        return {"ui": {"gifs": previews}}
 
 
 NODE_CLASS_MAPPINGS = {
