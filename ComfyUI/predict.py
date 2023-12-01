@@ -118,7 +118,7 @@ from nodes import (
 )
 
 
-def run(image_path, width, height, frames, fps,
+def run(image, width, height, frames, fps,
         motion_bucket_id, cond_aug, 
         ksampler_steps, cfg, crf,
         mask_radius, grow_mask_by):
@@ -132,7 +132,7 @@ def run(image_path, width, height, frames, fps,
 
         loadimage = LoadImage()
         loadimage_23 = loadimage.load_image(
-            image=image_path
+            image=image
         )
 
         svd_img2vid_conditioning = NODE_CLASS_MAPPINGS["SVD_img2vid_Conditioning"]()
@@ -245,7 +245,7 @@ class Predictor(BasePredictor):
 
     def predict(
         self,
-        image_text: str = Input(description="Input image text"),
+        image: Path = Input(description="Input image"),
         fps: int = Input(description="Frames per second", default=15),
         frames: int = Input(description="Frames", default=90),
         width: int = Input(description="width", default=512),
@@ -266,7 +266,7 @@ class Predictor(BasePredictor):
         for file_name in os.listdir(output_dir):
             os.remove(Path(output_dir, file_name))
 
-        res = run(image_text,
+        res = run(str(image),
                   width, height, 
                   frames, fps, 
                   motion_bucket_id, cond_aug,
