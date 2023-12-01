@@ -238,6 +238,7 @@ def run(image_path, width, height, frames, fps,
 
 from cog import BasePredictor, Input, Path
 from sizing_strategy import SizingStrategy
+from PIL import Image
 
 class Predictor(BasePredictor):
     def setup(self) -> None:
@@ -250,15 +251,6 @@ class Predictor(BasePredictor):
         image_path: Path = Input(description="Input image"),
         fps: int = Input(description="Frames per second", default=15),
         frames: int = Input(description="Frames", default=90),
-        sizing_strategy: str = Input(
-            description="Decide how to resize the input image",
-            choices=[
-                "maintain_aspect_ratio",
-                "crop_to_16_9",
-                "use_image_dimensions",
-            ],
-            default="maintain_aspect_ratio",
-        ),
         motion_bucket_id: int = Input(description="overall motion", default=127, ge=1, le=255),
         cond_aug: float = Input(description="noise", default=0.02, ge=-0.04, le=0.04),
         ksampler_steps: int = Input(description="more accurate to prompt but longer", default=20, ge=1, le=90),
@@ -270,14 +262,11 @@ class Predictor(BasePredictor):
         """Run a single prediction on the model"""
         # image_path_str = image.absolute().as_posix() if image else ''
         output_dir = 'ComfyUI/output'
-        
-        image = self.sizing_strategy.apply(sizing_strategy, image_path)
-        width, height = image.size
-        image.save(image_path)
-        
         os.makedirs(output_dir, exist_ok=True)
         for file_name in os.listdir(output_dir):
             os.remove(Path(output_dir, file_name))
+        
+        width, height = Image.open(str(image_path)).size
         res = run(str(image_path),
                   width, height, 
                   frames, fps, 
