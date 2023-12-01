@@ -1,3 +1,0 @@
-[submodule "ComfyUI/custom_nodes/was-node-suite-comfyui"]
-	path = ComfyUI/custom_nodes/was-node-suite-comfyui
-	url = git@github.com:WASasquatch/was-node-suite-comfyui.git
