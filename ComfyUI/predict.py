@@ -116,7 +116,7 @@ from nodes import (
 )
 
 
-def run(img_text):
+def run(img_text, iterations):
     if not img_text:
         raise Exception('No Input')
     
@@ -186,10 +186,10 @@ def run(img_text):
         svd_img2vid_conditioning_33 = svd_img2vid_conditioning.encode(
             width=512,
             height=512,
-            video_frames=24,
+            video_frames=25,
             motion_bucket_id=40,
-            fps=6,
-            augmentation_level=0.04,
+            fps=12,
+            augmentation_level=0.02,
             clip_vision=get_value_at_index(imageonlycheckpointloader_29, 1),
             init_image=get_value_at_index(vaedecode_8, 0),
             vae=get_value_at_index(imageonlycheckpointloader_29, 2),
@@ -199,7 +199,7 @@ def run(img_text):
         ksampler = KSampler()
         vhs_videocombine = NODE_CLASS_MAPPINGS["VHS_VideoCombine"]()
 
-        for q in range(10):
+        for q in range(iterations):
             videolinearcfgguidance_30 = videolinearcfgguidance.patch(
                 min_cfg=1, model=get_value_at_index(imageonlycheckpointloader_29, 0)
             )
@@ -249,17 +249,18 @@ class Predictor(BasePredictor):
         self,
         image_text: str = Input(description="Input image text"),
         # image: Path = Input(description="Input image"),
+        iterations: int = Input(description="iterations", default=3),
         # scale: float = Input(
         #     description="Factor to scale image by", ge=0, le=10, default=1.5
         # ),
     ) -> Path:
         """Run a single prediction on the model"""
         # image_path_str = image.absolute().as_posix() if image else ''
-        output_dir = 'output'
+        output_dir = 'ComfyUI/output'
         os.makedirs(output_dir, exist_ok=True)
         for file_name in os.listdir(output_dir):
-            os.remove(file_name)
-        res = run(image_text)
+            os.remove(Path(output_dir, file_name))
+        res = run(image_text, iterations)
         return Path(output_dir, res['filename'])
         # processed_input = preprocess(image)
         # output = self.model(processed_image, scale)
