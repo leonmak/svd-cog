@@ -118,7 +118,7 @@ from nodes import (
 )
 
 
-def run(image_path, frames, fps,
+def run(image_path, width, height, frames, fps,
         motion_bucket_id, cond_aug, 
         ksampler_steps, cfg, crf,
         mask_radius, grow_mask_by):
@@ -134,7 +134,6 @@ def run(image_path, frames, fps,
         loadimage_23 = loadimage.load_image(
             image=image_path
         )
-        height, width, _ = loadimage_23[0].shape[2:]  # Obtain height and width
 
         svd_img2vid_conditioning = NODE_CLASS_MAPPINGS["SVD_img2vid_Conditioning"]()
         svd_img2vid_conditioning_12 = svd_img2vid_conditioning.encode(
@@ -273,14 +272,14 @@ class Predictor(BasePredictor):
         output_dir = 'ComfyUI/output'
         
         image = self.sizing_strategy.apply(sizing_strategy, image_path)
+        width, height = image.size
         image.save(image_path)
         
         os.makedirs(output_dir, exist_ok=True)
         for file_name in os.listdir(output_dir):
             os.remove(Path(output_dir, file_name))
-
         res = run(str(image_path),
-                #   width, height, 
+                  width, height, 
                   frames, fps, 
                   motion_bucket_id, cond_aug,
                   ksampler_steps, cfg, crf,
