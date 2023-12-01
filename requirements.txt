@@ -13,3 +13,19 @@ tqdm
 psutil
 opencv-python
 imageio-ffmpeg
+cmake
+fairscale>=0.4.4
+git+https://github.com/WASasquatch/img2texture.git
+git+https://github.com/WASasquatch/cstr
+gitpython
+joblib
+matplotlib
+numba
+numpy>=1.18.5, <1.25.0
+pilgram
+git+https://github.com/WASasquatch/ffmpy.git
+rembg
+scikit-image==0.20.0
+scikit-learn
+timm>=0.4.12
+tqdm
