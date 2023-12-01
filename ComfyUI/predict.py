@@ -253,8 +253,8 @@ class Predictor(BasePredictor):
         width: int = Input(description="width", default=512),
         height: int = Input(description="height", default=512),
         motion_bucket_id: int = Input(description="overall motion", default=127, ge=1, le=255),
-        cond_aug: int = Input(description="noise", default=0.02, ge=-0.04, le=0.04),
-        ksample_steps:  int = Input(description="more accurate to prompt but longer", default=20, ge=1, le=90),
+        cond_aug: float = Input(description="noise", default=0.02, ge=-0.04, le=0.04),
+        ksample_steps: int = Input(description="more accurate to prompt but longer", default=20, ge=1, le=90),
     ) -> Path:
         """Run a single prediction on the model"""
         # image_path_str = image.absolute().as_posix() if image else ''
