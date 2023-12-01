@@ -116,7 +116,8 @@ from nodes import (
 )
 
 
-def run(img_text, iterations):
+def run(img_text, width, height, frames, fps,
+        motion_bucket_id, cond_aug, sample_steps):
     if not img_text:
         raise Exception('No Input')
     
@@ -125,7 +126,7 @@ def run(img_text, iterations):
     with torch.inference_mode():
         emptylatentimage = EmptyLatentImage()
         emptylatentimage_5 = emptylatentimage.generate(
-            width=512, height=512, batch_size=1
+            width=width, height=height, batch_size=1
         )
 
         checkpointloadersimple = CheckpointLoaderSimple()
@@ -184,12 +185,12 @@ def run(img_text, iterations):
 
         svd_img2vid_conditioning = NODE_CLASS_MAPPINGS["SVD_img2vid_Conditioning"]()
         svd_img2vid_conditioning_33 = svd_img2vid_conditioning.encode(
-            width=512,
-            height=512,
-            video_frames=25,
-            motion_bucket_id=40,
-            fps=12,
-            augmentation_level=0.02,
+            width=width,
+            height=height,
+            video_frames=frames,
+            motion_bucket_id=motion_bucket_id,
+            fps=fps,
+            augmentation_level=cond_aug,
             clip_vision=get_value_at_index(imageonlycheckpointloader_29, 1),
             init_image=get_value_at_index(vaedecode_8, 0),
             vae=get_value_at_index(imageonlycheckpointloader_29, 2),
@@ -199,43 +200,42 @@ def run(img_text, iterations):
         ksampler = KSampler()
         vhs_videocombine = NODE_CLASS_MAPPINGS["VHS_VideoCombine"]()
 
-        for q in range(iterations):
-            videolinearcfgguidance_30 = videolinearcfgguidance.patch(
-                min_cfg=1, model=get_value_at_index(imageonlycheckpointloader_29, 0)
-            )
+        videolinearcfgguidance_30 = videolinearcfgguidance.patch(
+            min_cfg=1, model=get_value_at_index(imageonlycheckpointloader_29, 0)
+        )
 
-            ksampler_35 = ksampler.sample(
-                seed=random.randint(1, 2**64),
-                steps=20,
-                cfg=2.5,
-                sampler_name="euler",
-                scheduler="karras",
-                denoise=1,
-                model=get_value_at_index(videolinearcfgguidance_30, 0),
-                positive=get_value_at_index(svd_img2vid_conditioning_33, 0),
-                negative=get_value_at_index(svd_img2vid_conditioning_33, 1),
-                latent_image=get_value_at_index(svd_img2vid_conditioning_33, 2),
-            )
+        ksampler_35 = ksampler.sample(
+            seed=random.randint(1, 2**64),
+            steps=sample_steps,
+            cfg=2.5,
+            sampler_name="euler",
+            scheduler="karras",
+            denoise=1,
+            model=get_value_at_index(videolinearcfgguidance_30, 0),
+            positive=get_value_at_index(svd_img2vid_conditioning_33, 0),
+            negative=get_value_at_index(svd_img2vid_conditioning_33, 1),
+            latent_image=get_value_at_index(svd_img2vid_conditioning_33, 2),
+        )
 
-            vaedecode_34 = vaedecode.decode(
-                samples=get_value_at_index(ksampler_35, 0),
-                vae=get_value_at_index(imageonlycheckpointloader_29, 2),
-            )
+        vaedecode_34 = vaedecode.decode(
+            samples=get_value_at_index(ksampler_35, 0),
+            vae=get_value_at_index(imageonlycheckpointloader_29, 2),
+        )
 
-            vhs_videocombine_36 = vhs_videocombine.combine_video(
-                frame_rate=20,
-                loop_count=0,
-                filename_prefix="SDXL-Turbo-SDV",
-                format="image/gif",
-                pingpong=False,
-                save_image=True,
-                crf=20,
-                save_metadata=False,
-                audio_file="",
-                images=get_value_at_index(vaedecode_34, 0),
-            )
+        vhs_videocombine_36 = vhs_videocombine.combine_video(
+            frame_rate=fps,
+            loop_count=0,
+            filename_prefix="SDXL-Turbo-SDV",
+            format="image/gif",
+            pingpong=False,
+            save_image=True,
+            crf=20,
+            save_metadata=False,
+            audio_file="",
+            images=get_value_at_index(vaedecode_34, 0),
+        )
     
-    return vhs_videocombine_36['ui']['gifs'][0]
+        return vhs_videocombine_36['ui']['gifs'][0]
 
 
 from cog import BasePredictor, Input, Path
@@ -248,19 +248,26 @@ class Predictor(BasePredictor):
     def predict(
         self,
         image_text: str = Input(description="Input image text"),
-        # image: Path = Input(description="Input image"),
-        iterations: int = Input(description="iterations", default=3),
-        # scale: float = Input(
-        #     description="Factor to scale image by", ge=0, le=10, default=1.5
-        # ),
+        fps: int = Input(description="Frames per second", default=15),
+        frames: int = Input(description="Frames", default=90),
+        width: int = Input(description="width", default=512),
+        height: int = Input(description="height", default=512),
+        motion_bucket_id: int = Input(description="overall motion", default=127, ge=1, le=255),
+        cond_aug: int = Input(description="noise", default=0.02, ge=-0.04, le=0.04),
+        ksample_steps:  int = Input(description="more accurate to prompt but longer", default=20, ge=1, le=90),
     ) -> Path:
         """Run a single prediction on the model"""
         # image_path_str = image.absolute().as_posix() if image else ''
         output_dir = 'ComfyUI/output'
+        
         os.makedirs(output_dir, exist_ok=True)
         for file_name in os.listdir(output_dir):
             os.remove(Path(output_dir, file_name))
-        res = run(image_text, iterations)
+        res = run(image_text,
+                  width, height, 
+                  frames, fps, 
+                  motion_bucket_id, cond_aug,
+                  ksample_steps)
         return Path(output_dir, res['filename'])
         # processed_input = preprocess(image)
         # output = self.model(processed_image, scale)
