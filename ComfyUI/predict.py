@@ -233,7 +233,7 @@ def run(image, width, height, frames, fps,
             audio_file="",
             images=get_value_at_index(vaedecode_8, 0),
         )
-        vhs_videocombine_42['ui']['gifs'][0]
+        return vhs_videocombine_42['ui']['gifs'][0]
 
 
 from cog import BasePredictor, Input, Path
