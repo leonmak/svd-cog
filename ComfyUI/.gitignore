@@ -8,6 +8,7 @@ __pycache__/
 *.png
 *.jpeg
 *.jpg
+*.ipynb
 /web/
 extra_model_paths.yaml
 /.vs
