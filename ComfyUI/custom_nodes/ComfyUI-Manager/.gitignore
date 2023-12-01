@@ -1,9 +1,0 @@
-__pycache__/
-.idea/
-.vscode/
-.tmp
-config.ini
-snapshots/**
-startup-scripts/**
-.openart_key
-matrix_auth
