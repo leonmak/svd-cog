@@ -118,7 +118,7 @@ from nodes import (
 )
 
 
-def run(image, width, height, frames, fps,
+def run(image_path, frames, fps,
         motion_bucket_id, cond_aug, 
         ksampler_steps, cfg, crf,
         mask_radius, grow_mask_by):
@@ -132,8 +132,9 @@ def run(image, width, height, frames, fps,
 
         loadimage = LoadImage()
         loadimage_23 = loadimage.load_image(
-            image=image
+            image=image_path
         )
+        height, width, _ = loadimage_23[0].shape[2:]  # Obtain height and width
 
         svd_img2vid_conditioning = NODE_CLASS_MAPPINGS["SVD_img2vid_Conditioning"]()
         svd_img2vid_conditioning_12 = svd_img2vid_conditioning.encode(
@@ -237,19 +238,28 @@ def run(image, width, height, frames, fps,
 
 
 from cog import BasePredictor, Input, Path
+from sizing_strategy import SizingStrategy
 
 class Predictor(BasePredictor):
     def setup(self) -> None:
         """Load the model into memory to make running multiple predictions efficient"""
         # self.model = torch.load("./weights.pth")
+        self.sizing_strategy = SizingStrategy()
 
     def predict(
         self,
-        image: Path = Input(description="Input image"),
+        image_path: Path = Input(description="Input image"),
         fps: int = Input(description="Frames per second", default=15),
         frames: int = Input(description="Frames", default=90),
-        width: int = Input(description="width", default=512),
-        height: int = Input(description="height", default=512),
+        sizing_strategy: str = Input(
+            description="Decide how to resize the input image",
+            choices=[
+                "maintain_aspect_ratio",
+                "crop_to_16_9",
+                "use_image_dimensions",
+            ],
+            default="maintain_aspect_ratio",
+        ),
         motion_bucket_id: int = Input(description="overall motion", default=127, ge=1, le=255),
         cond_aug: float = Input(description="noise", default=0.02, ge=-0.04, le=0.04),
         ksampler_steps: int = Input(description="more accurate to prompt but longer", default=20, ge=1, le=90),
@@ -257,17 +267,20 @@ class Predictor(BasePredictor):
         crf: int = Input(description="crf", default=20, ge=0, le=100),
         mask_radius: float = Input(description="radius of mask", default=10.1, ge=1, le=50),
         grow_mask_by: int = Input(description="grow mask by", default=6, ge=0, le=50),
-    ) -> List[Path]:
+    ) -> Path:
         """Run a single prediction on the model"""
         # image_path_str = image.absolute().as_posix() if image else ''
         output_dir = 'ComfyUI/output'
+        
+        image = self.sizing_strategy.apply(sizing_strategy, image_path)
+        image.save(image_path)
         
         os.makedirs(output_dir, exist_ok=True)
         for file_name in os.listdir(output_dir):
             os.remove(Path(output_dir, file_name))
 
-        res = run(str(image),
-                  width, height, 
+        res = run(str(image_path),
+                #   width, height, 
                   frames, fps, 
                   motion_bucket_id, cond_aug,
                   ksampler_steps, cfg, crf,
