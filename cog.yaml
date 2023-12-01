@@ -20,6 +20,6 @@ build:
   python_requirements: requirements.txt
 
 
-image: "r8.im/leonmak/svd-cog"
+image: "r8.im/leonmak/svd"
 # predict.py defines how predictions are run on your model
 predict: "ComfyUI/predict.py:Predictor"
