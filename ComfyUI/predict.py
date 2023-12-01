@@ -235,8 +235,7 @@ def run(img_text):
                 images=get_value_at_index(vaedecode_34, 0),
             )
     
-    res =  vhs_videocombine_36['ui']['gifs'][0]
-    return os.path.join(res['subfolder'], res['filename'])
+    return vhs_videocombine_36['ui']['gifs'][0]
 
 
 from cog import BasePredictor, Input, Path
@@ -256,7 +255,12 @@ class Predictor(BasePredictor):
     ) -> Path:
         """Run a single prediction on the model"""
         # image_path_str = image.absolute().as_posix() if image else ''
-        return run(image_text)
+        output_dir = 'output'
+        os.makedirs(output_dir, exist_ok=True)
+        for file_name in os.listdir(output_dir):
+            os.remove(file_name)
+        res = run(image_text)
+        return Path(output_dir, res['filename'])
         # processed_input = preprocess(image)
         # output = self.model(processed_image, scale)
         # return postprocess(output)
