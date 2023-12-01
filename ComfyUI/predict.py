@@ -1,7 +1,7 @@
 import os
 import random
 import sys
-from typing import Sequence, Mapping, Any, Union
+from typing import List, Sequence, Mapping, Any, Union
 import torch
 
 
@@ -107,135 +107,133 @@ def import_custom_nodes() -> None:
 
 
 from nodes import (
-    VAEDecode,
-    CLIPTextEncode,
-    CheckpointLoaderSimple,
-    KSampler,
-    EmptyLatentImage,
     NODE_CLASS_MAPPINGS,
+    LoadImage,
+    VAEEncodeForInpaint,
+    LatentComposite,
+    KSampler,
+    VAEDecode,
+    VAEEncode,
+    ImageScale,
 )
 
 
-def run(img_text, width, height, frames, fps,
-        motion_bucket_id, cond_aug, sample_steps):
-    if not img_text:
-        raise Exception('No Input')
-    
+def run(image_path, width, height, frames, fps,
+        motion_bucket_id, cond_aug, 
+        ksampler_steps, cfg, crf,
+        mask_radius, grow_mask_by):
     import_custom_nodes()
-    
+
     with torch.inference_mode():
-        emptylatentimage = EmptyLatentImage()
-        emptylatentimage_5 = emptylatentimage.generate(
-            width=width, height=height, batch_size=1
-        )
-
-        checkpointloadersimple = CheckpointLoaderSimple()
-        checkpointloadersimple_20 = checkpointloadersimple.load_checkpoint(
-            ckpt_name="sd_xl_turbo_1.0_fp16.safetensors"
-        )
-
-        cliptextencode = CLIPTextEncode()
-        cliptextencode_6 = cliptextencode.encode(
-            text=img_text,
-            clip=get_value_at_index(checkpointloadersimple_20, 1),
-        )
-
-        cliptextencode_7 = cliptextencode.encode(
-            text="text, watermark",
-            clip=get_value_at_index(checkpointloadersimple_20, 1),
-        )
-
-        ksamplerselect = NODE_CLASS_MAPPINGS["KSamplerSelect"]()
-        ksamplerselect_14 = ksamplerselect.get_sampler(sampler_name="euler_ancestral")
-
-        # seed_rgthree = NODE_CLASS_MAPPINGS["Seed (rgthree)"]()
-        # seed_rgthree_28 = seed_rgthree.main(seed=random.randint(1, 2**64))
-
         imageonlycheckpointloader = NODE_CLASS_MAPPINGS["ImageOnlyCheckpointLoader"]()
-        imageonlycheckpointloader_29 = imageonlycheckpointloader.load_checkpoint(
-            ckpt_name="svd_xt.safetensors"
+        imageonlycheckpointloader_15 = imageonlycheckpointloader.load_checkpoint(
+            ckpt_name="svd-fp16.safetensors"
         )
 
-        # freeu_v2 = NODE_CLASS_MAPPINGS["FreeU_V2"]()
-        # freeu_v2_31 = freeu_v2.patch(b1=1.3, b2=1.4, s1=0.9, s2=0.2)
-
-        sdturboscheduler = NODE_CLASS_MAPPINGS["SDTurboScheduler"]()
-        sdturboscheduler_22 = sdturboscheduler.get_sigmas(
-            steps=1, model=get_value_at_index(checkpointloadersimple_20, 0)
-        )
-
-        samplercustom = NODE_CLASS_MAPPINGS["SamplerCustom"]()
-        samplercustom_13 = samplercustom.sample(
-            add_noise=True,
-            noise_seed=random.randint(1, 2**64),
-            cfg=1,
-            model=get_value_at_index(checkpointloadersimple_20, 0),
-            positive=get_value_at_index(cliptextencode_6, 0),
-            negative=get_value_at_index(cliptextencode_7, 0),
-            sampler=get_value_at_index(ksamplerselect_14, 0),
-            sigmas=get_value_at_index(sdturboscheduler_22, 0),
-            latent_image=get_value_at_index(emptylatentimage_5, 0),
-        )
-
-        vaedecode = VAEDecode()
-        vaedecode_8 = vaedecode.decode(
-            samples=get_value_at_index(samplercustom_13, 0),
-            vae=get_value_at_index(checkpointloadersimple_20, 2),
+        loadimage = LoadImage()
+        loadimage_23 = loadimage.load_image(
+            image=image_path
         )
 
         svd_img2vid_conditioning = NODE_CLASS_MAPPINGS["SVD_img2vid_Conditioning"]()
-        svd_img2vid_conditioning_33 = svd_img2vid_conditioning.encode(
+        svd_img2vid_conditioning_12 = svd_img2vid_conditioning.encode(
             width=width,
             height=height,
             video_frames=frames,
             motion_bucket_id=motion_bucket_id,
             fps=fps,
             augmentation_level=cond_aug,
-            clip_vision=get_value_at_index(imageonlycheckpointloader_29, 1),
-            init_image=get_value_at_index(vaedecode_8, 0),
-            vae=get_value_at_index(imageonlycheckpointloader_29, 2),
+            clip_vision=get_value_at_index(imageonlycheckpointloader_15, 1),
+            init_image=get_value_at_index(loadimage_23, 0),
+            vae=get_value_at_index(imageonlycheckpointloader_15, 2),
+        )
+
+        imagescale = ImageScale()
+        imagescale_34 = imagescale.upscale(
+            upscale_method="nearest-exact",
+            width=width,
+            height=height,
+            crop="disabled",
+            image=get_value_at_index(loadimage_23, 0),
+        )
+
+        mask_gaussian_region = NODE_CLASS_MAPPINGS["Mask Gaussian Region"]()
+        mask_gaussian_region_41 = mask_gaussian_region.gaussian_region(
+            radius=mask_radius, masks=get_value_at_index(loadimage_23, 1)
+        )
+
+        vaeencodeforinpaint = VAEEncodeForInpaint()
+        vaeencodeforinpaint_27 = vaeencodeforinpaint.encode(
+            grow_mask_by=grow_mask_by,
+            pixels=get_value_at_index(imagescale_34, 0),
+            vae=get_value_at_index(imageonlycheckpointloader_15, 2),
+            mask=get_value_at_index(mask_gaussian_region_41, 0),
+        )
+
+        vaeencode = VAEEncode()
+        vaeencode_30 = vaeencode.encode(
+            pixels=get_value_at_index(imagescale_34, 0),
+            vae=get_value_at_index(imageonlycheckpointloader_15, 2),
         )
 
         videolinearcfgguidance = NODE_CLASS_MAPPINGS["VideoLinearCFGGuidance"]()
+        vhs_duplicatelatents = NODE_CLASS_MAPPINGS["VHS_DuplicateLatents"]()
+        latentcomposite = LatentComposite()
         ksampler = KSampler()
+        vaedecode = VAEDecode()
         vhs_videocombine = NODE_CLASS_MAPPINGS["VHS_VideoCombine"]()
 
-        videolinearcfgguidance_30 = videolinearcfgguidance.patch(
-            min_cfg=1, model=get_value_at_index(imageonlycheckpointloader_29, 0)
+        videolinearcfgguidance_14 = videolinearcfgguidance.patch(
+            min_cfg=1, model=get_value_at_index(imageonlycheckpointloader_15, 0)
         )
 
-        ksampler_35 = ksampler.sample(
+        vhs_duplicatelatents_28 = vhs_duplicatelatents.duplicate_input(
+            multiply_by=14, latents=get_value_at_index(vaeencodeforinpaint_27, 0)
+        )
+
+        vhs_duplicatelatents_31 = vhs_duplicatelatents.duplicate_input(
+            multiply_by=14, latents=get_value_at_index(vaeencode_30, 0)
+        )
+
+        latentcomposite_33 = latentcomposite.composite(
+            x=0,
+            y=0,
+            feather=0,
+            samples_to=get_value_at_index(vhs_duplicatelatents_28, 0),
+            samples_from=get_value_at_index(vhs_duplicatelatents_31, 0),
+        )
+
+        ksampler_3 = ksampler.sample(
             seed=random.randint(1, 2**64),
-            steps=sample_steps,
-            cfg=2.5,
+            steps=ksampler_steps,
+            cfg=cfg,
             sampler_name="euler",
             scheduler="karras",
             denoise=1,
-            model=get_value_at_index(videolinearcfgguidance_30, 0),
-            positive=get_value_at_index(svd_img2vid_conditioning_33, 0),
-            negative=get_value_at_index(svd_img2vid_conditioning_33, 1),
-            latent_image=get_value_at_index(svd_img2vid_conditioning_33, 2),
+            model=get_value_at_index(videolinearcfgguidance_14, 0),
+            positive=get_value_at_index(svd_img2vid_conditioning_12, 0),
+            negative=get_value_at_index(svd_img2vid_conditioning_12, 1),
+            latent_image=get_value_at_index(latentcomposite_33, 0),
         )
 
-        vaedecode_34 = vaedecode.decode(
-            samples=get_value_at_index(ksampler_35, 0),
-            vae=get_value_at_index(imageonlycheckpointloader_29, 2),
+        vaedecode_8 = vaedecode.decode(
+            samples=get_value_at_index(ksampler_3, 0),
+            vae=get_value_at_index(imageonlycheckpointloader_15, 2),
         )
 
-        vhs_videocombine_36 = vhs_videocombine.combine_video(
-            frame_rate=fps,
+        vhs_videocombine_42 = vhs_videocombine.combine_video(
+            frame_rate=8,
             loop_count=0,
-            filename_prefix="SDXL-Turbo-SDV",
-            format="image/gif",
+            filename_prefix="animate",
+            format="video/h264-mp4",
             pingpong=False,
             save_image=True,
-            crf=20,
-            save_metadata=False,
+            crf=crf,
+            save_metadata=True,
             audio_file="",
-            images=get_value_at_index(vaedecode_34, 0),
+            images=get_value_at_index(vaedecode_8, 0),
         )
-    
-        return vhs_videocombine_36['ui']['gifs'][0]
+        vhs_videocombine_42['ui']['gifs'][0]
 
 
 from cog import BasePredictor, Input, Path
@@ -254,8 +252,12 @@ class Predictor(BasePredictor):
         height: int = Input(description="height", default=512),
         motion_bucket_id: int = Input(description="overall motion", default=127, ge=1, le=255),
         cond_aug: float = Input(description="noise", default=0.02, ge=-0.04, le=0.04),
-        ksample_steps: int = Input(description="more accurate to prompt but longer", default=20, ge=1, le=90),
-    ) -> Path:
+        ksampler_steps: int = Input(description="more accurate to prompt but longer", default=20, ge=1, le=90),
+        cfg: float = Input(description="cfg", default=2.5, ge=0, le=10),
+        crf: int = Input(description="crf", default=20, ge=0, le=100),
+        mask_radius: float = Input(description="radius of mask", default=10.1, ge=1, le=50),
+        grow_mask_by: int = Input(description="grow mask by", default=6, ge=0, le=50),
+    ) -> List[Path]:
         """Run a single prediction on the model"""
         # image_path_str = image.absolute().as_posix() if image else ''
         output_dir = 'ComfyUI/output'
@@ -263,11 +265,14 @@ class Predictor(BasePredictor):
         os.makedirs(output_dir, exist_ok=True)
         for file_name in os.listdir(output_dir):
             os.remove(Path(output_dir, file_name))
+
         res = run(image_text,
                   width, height, 
                   frames, fps, 
                   motion_bucket_id, cond_aug,
-                  ksample_steps)
+                  ksampler_steps, cfg, crf,
+                  mask_radius, grow_mask_by)
+
         return Path(output_dir, res['filename'])
         # processed_input = preprocess(image)
         # output = self.model(processed_image, scale)
