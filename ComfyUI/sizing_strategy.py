@@ -73,7 +73,12 @@ class SizingStrategy:
         return image.size
 
     def resize_image(self, image, width, height):
-        return image.resize((width, height)) if image is not None else None
+        if image is None:
+            return None
+        bands = image.split()
+        bands = [b.resize((width, height), Image.BILINEAR) for b in bands]
+        image = Image.merge('RGBA', bands)
+        return image
 
     def open_image(self, image_path):
         return Image.open(str(image_path)) if image_path is not None else None
@@ -90,7 +95,7 @@ class SizingStrategy:
 
     def apply(
         self,
-        sizing_strategy,
+        sizing_strategy: str,
         image=None,
     ):
         image = self.open_image(image)
@@ -98,19 +103,16 @@ class SizingStrategy:
 
         if sizing_strategy == "crop_to_16_9":
             print("Resizing and cropping to 16:9")
-            return self.resize_and_crop(width, height, image)
-        elif sizing_strategy == "maintain_aspect_ratio":
-            print("Resizing but keeping aspect ratio")
-            width, height = self.maintain_aspect_ratio(width, height)
+            image = self.resize_and_crop(width, height, image)
         else:
-            print("Using image dimensions")
-            width, height = self.divisible_by_64(image)
+            if sizing_strategy == "maintain_aspect_ratio":
+                width, height = self.maintain_aspect_ratio(width, height)
+            else:
+                print("Flooring image dimensions")
+                width, height = self.divisible_by_64(image)
 
-        resized_image = self.resize_image(
-            image,
-            width,
-            height,
-        )
-
+            image = self.resize_image(image, width, height)
+        
+        # create image with alpha channel
         print(f"Using dimensions {width}x{height}")
-        return resized_image
+        return [image, width, height]

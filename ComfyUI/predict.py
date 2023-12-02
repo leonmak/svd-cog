@@ -121,7 +121,7 @@ from nodes import (
 def run(image_path, width, height, frames, fps,
         motion_bucket_id, cond_aug, 
         ksampler_steps, cfg, crf,
-        mask_radius, grow_mask_by):
+        mask_radius, grow_mask_by, output_format):
     import_custom_nodes()
 
     with torch.inference_mode():
@@ -207,7 +207,7 @@ def run(image_path, width, height, frames, fps,
             seed=random.randint(1, 2**64),
             steps=ksampler_steps,
             cfg=cfg,
-            sampler_name="euler",
+            sampler_name="EulerEDMSampler",
             scheduler="karras",
             denoise=1,
             model=get_value_at_index(videolinearcfgguidance_14, 0),
@@ -225,7 +225,7 @@ def run(image_path, width, height, frames, fps,
             frame_rate=8,
             loop_count=0,
             filename_prefix="animate",
-            format="video/h264-mp4",
+            format=output_format,
             pingpong=False,
             save_image=True,
             crf=crf,
@@ -238,6 +238,7 @@ def run(image_path, width, height, frames, fps,
 
 from cog import BasePredictor, Input, Path
 from sizing_strategy import SizingStrategy
+from loop_strategy import loop, loop_reverse
 from PIL import Image
 
 class Predictor(BasePredictor):
@@ -258,23 +259,56 @@ class Predictor(BasePredictor):
         crf: int = Input(description="crf", default=20, ge=0, le=100),
         mask_radius: float = Input(description="radius of mask", default=10.1, ge=1, le=50),
         grow_mask_by: int = Input(description="grow mask by", default=6, ge=0, le=50),
+        file_format: str = Input(description="output file format", 
+                            choices=['image/gif', 'image/webp', 'video/h264-mp4', 'video/h265-mp4', 'video/webm'],
+                            default='image/gif'),
+        sizing_strategy: str = Input(
+            description="Decide how to resize the input image",
+            choices=[
+                "maintain_aspect_ratio",
+                "crop_to_16_9",
+                "use_image_dimensions",
+            ],
+            default="maintain_aspect_ratio",
+        ),
+        playback: str = Input(
+            description="Decide how to resize the input image",
+            choices=[
+                "loop",
+                "once",
+                "reverse loop",
+            ],
+            default="loop",
+        ),
     ) -> Path:
         """Run a single prediction on the model"""
-        # image_path_str = image.absolute().as_posix() if image else ''
+        # clear image
         output_dir = 'ComfyUI/output'
         os.makedirs(output_dir, exist_ok=True)
         for file_name in os.listdir(output_dir):
             os.remove(Path(output_dir, file_name))
         
-        width, height = Image.open(str(image_path)).size
+        # resize and save image
+        (image, width, height)= self.sizing_strategy.apply(
+            image=Image.open(str(image_path)),
+            sizing_strategy=sizing_strategy)
+        image.save(image_path)
+
         res = run(str(image_path),
                   width, height, 
                   frames, fps, 
                   motion_bucket_id, cond_aug,
                   ksampler_steps, cfg, crf,
-                  mask_radius, grow_mask_by)
+                  mask_radius, grow_mask_by,
+                  file_format)
 
-        return Path(output_dir, res['filename'])
-        # processed_input = preprocess(image)
-        # output = self.model(processed_image, scale)
-        # return postprocess(output)
+        output_path = Path(output_dir, res['filename'])
+
+        if playback == 'loop':
+            loop(output_path)
+        elif playback == 'once':
+            loop(output_path, plays=1)
+        elif playback == 'reverse loop':
+            loop_reverse(output_path)
+
+        return output_path
