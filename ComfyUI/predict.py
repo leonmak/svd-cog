@@ -253,7 +253,7 @@ class Predictor(BasePredictor):
         fps: int = Input(description="Frames per second", default=14),
         frames: int = Input(description="Frames", default=28),
         motion_bucket_id: int = Input(description="overall motion", default=127, ge=1, le=255),
-        cond_aug: float = Input(description="noise", default=0.02, ge=-0.04, le=0.04),
+        cond_aug: float = Input(description="noise", default=0.02, ge=-0.4, le=0.4),
         ksampler_steps: int = Input(description="more accurate to prompt but longer", default=20, ge=1, le=90),
         cfg: float = Input(description="cfg", default=2.5, ge=0, le=10),
         crf: int = Input(description="crf", default=20, ge=0, le=100),
