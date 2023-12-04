@@ -12,10 +12,7 @@ def loop(input_path, plays=0):
 
 def loop_reverse(input_path):
     original_gif = Image.open(input_path)
-    
-    # Create a new list of frames with original frames followed by reversed frames for looping
     frames = [frame.copy() for frame in ImageSequence.Iterator(original_gif)]
-    forward = frames[::]
-    frames.reverse()
-    forward.extend(frames)
-    frames[0].save(input_path, save_all=True, append_images=forward[1:])
+    back = frames[::-1]
+    frames.extend(back)
+    frames[0].save(input_path, save_all=True, loop=0, append_images=frames[1:])
