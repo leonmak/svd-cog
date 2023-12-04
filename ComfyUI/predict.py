@@ -289,8 +289,8 @@ class Predictor(BasePredictor):
             os.remove(Path(output_dir, file_name))
         
         # resize and save image
-        (image, width, height)= self.sizing_strategy.apply(
-            image=Image.open(str(image_path)),
+        (image, width, height) = self.sizing_strategy.apply(
+            image=str(image_path),
             sizing_strategy=sizing_strategy)
         image.save(image_path)
 
