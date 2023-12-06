@@ -38,7 +38,8 @@ class SizingStrategy:
         scale_factor_w = MAX_W_DIMENSION / width
         scale_factor_h = MAX_H_DIMENSION / height
 
-        print(f"Scale factor w: {scale_factor_w}, Scale factor h: {scale_factor_h}")
+        print(
+            f"Scale factor w: {scale_factor_w}, Scale factor h: {scale_factor_h}")
 
         # Scale up/down based on the less constraining dimension
         if scale_factor_w < scale_factor_h:
@@ -112,7 +113,7 @@ class SizingStrategy:
                 width, height = self.divisible_by_64(image)
 
             image = self.resize_image(image, width, height)
-        
+
         # create image with alpha channel
         print(f"Using dimensions {width}x{height}")
         return [image, width, height]

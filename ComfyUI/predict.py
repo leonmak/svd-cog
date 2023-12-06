@@ -1,34 +1,9 @@
-from sizing_strategy import SizingStrategy
+import sys
 from cog import BasePredictor, Input, Path
-from nodes import (
-    NODE_CLASS_MAPPINGS,
-    LoadImage,
-    VAEEncodeForInpaint,
-    LatentComposite,
-    KSampler,
-    VAEDecode,
-    VAEEncode,
-    ImageScale,
-)
 import os
 import random
-import sys
 from typing import Sequence, Mapping, Any, Union
 import torch
-from PIL import Image, ImageSequence
-
-
-def loop(input_path, plays=0, reverse=False):
-    original_gif = Image.open(input_path)
-    frames = [frame.copy() for frame in ImageSequence.Iterator(original_gif)]
-    if reverse:
-        back = frames[::-1]
-        frames.extend(back)
-    frames[0].save(input_path,
-                   save_all=True,
-                   loop=plays,
-                   append_images=frames[1:])
-
 
 def get_value_at_index(obj: Union[Sequence, Mapping], index: int) -> Any:
     """Returns the value at the given index of a sequence or mapping.
@@ -131,6 +106,17 @@ def import_custom_nodes() -> None:
     init_custom_nodes()
 
 
+
+from nodes import (
+    NODE_CLASS_MAPPINGS,
+    LoadImage,
+    VAEEncodeForInpaint,
+    LatentComposite,
+    KSampler,
+    VAEDecode,
+    VAEEncode,
+    ImageScale,
+)
 def run(image_path, width, height, frames, fps,
         motion_bucket_id, cond_aug,
         ksampler_steps, cfg, crf,
@@ -252,7 +238,10 @@ def run(image_path, width, height, frames, fps,
         return vhs_videocombine_42['ui']['gifs'][0]
 
 
-class Predictor(BasePredictor):
+from sizing_strategy import SizingStrategy
+from loop_strategy import loop
+
+class Predictor(BasePredictor):    
     def setup(self) -> None:
         """Load the model into memory to make running multiple predictions efficient"""
         # self.model = torch.load("./weights.pth")
