@@ -309,6 +309,6 @@ class Predictor(BasePredictor):
         elif playback == 'once':
             loop(output_path, plays=1)
         elif playback == 'reverse loop':
-            loop_reverse(output_path)
+            loop(output_path, reverse=True)
 
         return output_path
