@@ -1,5 +1,3 @@
-from PIL import Image
-from loop_strategy import loop
 from sizing_strategy import SizingStrategy
 from cog import BasePredictor, Input, Path
 from nodes import (
@@ -15,8 +13,21 @@ from nodes import (
 import os
 import random
 import sys
-from typing import List, Sequence, Mapping, Any, Union
+from typing import Sequence, Mapping, Any, Union
 import torch
+from PIL import Image, ImageSequence
+
+
+def loop(input_path, plays=0, reverse=False):
+    original_gif = Image.open(input_path)
+    frames = [frame.copy() for frame in ImageSequence.Iterator(original_gif)]
+    if reverse:
+        back = frames[::-1]
+        frames.extend(back)
+    frames[0].save(input_path,
+                   save_all=True,
+                   loop=plays,
+                   append_images=frames[1:])
 
 
 def get_value_at_index(obj: Union[Sequence, Mapping], index: int) -> Any:
