@@ -1,3 +1,17 @@
+from PIL import Image
+from loop_strategy import loop
+from sizing_strategy import SizingStrategy
+from cog import BasePredictor, Input, Path
+from nodes import (
+    NODE_CLASS_MAPPINGS,
+    LoadImage,
+    VAEEncodeForInpaint,
+    LatentComposite,
+    KSampler,
+    VAEDecode,
+    VAEEncode,
+    ImageScale,
+)
 import os
 import random
 import sys
@@ -106,26 +120,15 @@ def import_custom_nodes() -> None:
     init_custom_nodes()
 
 
-from nodes import (
-    NODE_CLASS_MAPPINGS,
-    LoadImage,
-    VAEEncodeForInpaint,
-    LatentComposite,
-    KSampler,
-    VAEDecode,
-    VAEEncode,
-    ImageScale,
-)
-
-
 def run(image_path, width, height, frames, fps,
-        motion_bucket_id, cond_aug, 
+        motion_bucket_id, cond_aug,
         ksampler_steps, cfg, crf,
         mask_radius, grow_mask_by, output_format):
     import_custom_nodes()
 
     with torch.inference_mode():
-        imageonlycheckpointloader = NODE_CLASS_MAPPINGS["ImageOnlyCheckpointLoader"]()
+        imageonlycheckpointloader = NODE_CLASS_MAPPINGS["ImageOnlyCheckpointLoader"](
+        )
         imageonlycheckpointloader_15 = imageonlycheckpointloader.load_checkpoint(
             ckpt_name="svd-fp16.safetensors"
         )
@@ -135,7 +138,8 @@ def run(image_path, width, height, frames, fps,
             image=image_path
         )
 
-        svd_img2vid_conditioning = NODE_CLASS_MAPPINGS["SVD_img2vid_Conditioning"]()
+        svd_img2vid_conditioning = NODE_CLASS_MAPPINGS["SVD_img2vid_Conditioning"](
+        )
         svd_img2vid_conditioning_12 = svd_img2vid_conditioning.encode(
             width=width,
             height=height,
@@ -176,7 +180,8 @@ def run(image_path, width, height, frames, fps,
             vae=get_value_at_index(imageonlycheckpointloader_15, 2),
         )
 
-        videolinearcfgguidance = NODE_CLASS_MAPPINGS["VideoLinearCFGGuidance"]()
+        videolinearcfgguidance = NODE_CLASS_MAPPINGS["VideoLinearCFGGuidance"](
+        )
         vhs_duplicatelatents = NODE_CLASS_MAPPINGS["VHS_DuplicateLatents"]()
         latentcomposite = LatentComposite()
         ksampler = KSampler()
@@ -236,11 +241,6 @@ def run(image_path, width, height, frames, fps,
         return vhs_videocombine_42['ui']['gifs'][0]
 
 
-from cog import BasePredictor, Input, Path
-from sizing_strategy import SizingStrategy
-from loop_strategy import loop, loop_reverse
-from PIL import Image
-
 class Predictor(BasePredictor):
     def setup(self) -> None:
         """Load the model into memory to make running multiple predictions efficient"""
@@ -252,16 +252,22 @@ class Predictor(BasePredictor):
         image_path: Path = Input(description="Input image"),
         fps: int = Input(description="Frames per second", default=14),
         frames: int = Input(description="Frames", default=28),
-        motion_bucket_id: int = Input(description="overall motion", default=127, ge=1, le=255),
-        cond_aug: float = Input(description="noise", default=0.02, ge=-0.4, le=0.4),
-        ksampler_steps: int = Input(description="more accurate to prompt but longer", default=20, ge=1, le=90),
+        motion_bucket_id: int = Input(
+            description="overall motion", default=127, ge=1, le=255),
+        cond_aug: float = Input(description="noise",
+                                default=0.02, ge=-0.4, le=0.4),
+        ksampler_steps: int = Input(
+            description="more accurate to prompt but longer", default=20, ge=1, le=90),
         cfg: float = Input(description="cfg", default=2.5, ge=0, le=10),
         crf: int = Input(description="crf", default=20, ge=0, le=100),
-        mask_radius: float = Input(description="radius of mask", default=10.1, ge=1, le=50),
-        grow_mask_by: int = Input(description="grow mask by", default=6, ge=0, le=50),
-        file_format: str = Input(description="output file format", 
-                            choices=['image/gif', 'image/webp', 'video/h264-mp4', 'video/h265-mp4', 'video/webm'],
-                            default='image/gif'),
+        mask_radius: float = Input(
+            description="radius of mask", default=10.1, ge=1, le=50),
+        grow_mask_by: int = Input(
+            description="grow mask by", default=6, ge=0, le=50),
+        file_format: str = Input(description="output file format",
+                                 choices=[
+                                     'image/gif', 'image/webp', 'video/h264-mp4', 'video/h265-mp4', 'video/webm'],
+                                 default='image/gif'),
         sizing_strategy: str = Input(
             description="Decide how to resize the input image",
             choices=[
@@ -287,7 +293,7 @@ class Predictor(BasePredictor):
         os.makedirs(output_dir, exist_ok=True)
         for file_name in os.listdir(output_dir):
             os.remove(Path(output_dir, file_name))
-        
+
         # resize and save image
         (image, width, height) = self.sizing_strategy.apply(
             image=str(image_path),
@@ -295,8 +301,8 @@ class Predictor(BasePredictor):
         image.save(image_path)
 
         res = run(str(image_path),
-                  width, height, 
-                  frames, fps, 
+                  width, height,
+                  frames, fps,
                   motion_bucket_id, cond_aug,
                   ksampler_steps, cfg, crf,
                   mask_radius, grow_mask_by,
