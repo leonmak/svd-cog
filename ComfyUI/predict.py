@@ -239,7 +239,6 @@ def run(image_path, width, height, frames, fps,
 
 
 from sizing_strategy import SizingStrategy
-from loop_strategy import loop
 
 class Predictor(BasePredictor):    
     def setup(self) -> None:
@@ -277,15 +276,15 @@ class Predictor(BasePredictor):
             ],
             default="maintain_aspect_ratio",
         ),
-        playback: str = Input(
-            description="Decide how to resize the input image",
-            choices=[
-                "loop",
-                "once",
-                "reverse loop",
-            ],
-            default="loop",
-        ),
+        # playback: str = Input(
+        #     description="Decide how to resize the input image",
+        #     choices=[
+        #         "loop",
+        #         "once",
+        #         "reverse loop",
+        #     ],
+        #     default="loop",
+        # ),
     ) -> Path:
         """Run a single prediction on the model"""
         # clear image
@@ -310,11 +309,11 @@ class Predictor(BasePredictor):
 
         output_path = Path(output_dir, res['filename'])
 
-        if playback == 'loop':
-            loop(output_path)
-        elif playback == 'once':
-            loop(output_path, plays=1)
-        elif playback == 'reverse loop':
-            loop(output_path, reverse=True)
+        # if playback == 'loop':
+        #     loop(output_path)
+        # elif playback == 'once':
+        #     loop(output_path, plays=1)
+        # elif playback == 'reverse loop':
+        #     loop(output_path, reverse=True)
 
         return output_path
